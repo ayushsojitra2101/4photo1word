@@ -1,51 +1,34 @@
 const bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
-const { token } = require("morgan");
-var db = require("../Models/DB");
+const User = require("../models/User");
 
-exports.login = function (req, res, next) {
+
+exports.login = async function (req, res, next) {
   try {
-    db.query(
-      "SELECT * FROM `user` where email like '" + req.body.email + "'",
-      async function (err, result) {
-        if (err) console.log(err);
+    let email = req.body.email;
 
-        if (result.length === 0) {
-          gado(false, "this email is not valid");
-        } else if (req.body.password === "") {
-          gado(false, "plz enter password");
-        } else if (req.body.password !== result[0].password) {
-          gado(false, "plz enter valid password");
-        } else {
-          let token = await jwt.sign({ id: result[0].id }, "hhhhhh");
-          // db.end();
-          res.status(201).json({
-            status: "success",
-            result,
-            token,
-          });
-        }
-      }
-    );
-    function gado(dl, message, result, token) {
-      if (dl) {
-        res.status(201).json({
-          status: "success",
-          message,
-          result,
+    let data = await User.findOne({ email });
+
+    if (!data) {
+      throw new Error("Please enter valid email");
+    } else {
+      let pass = req.body.password;
+      let checkUser = await bcrypt.compare(pass, data.password);
+      if (!checkUser) {
+        throw new Error("Please enter valid password");
+      } else {
+        var token = await jwt.sign({ id: data._id }, "malkari");
+        res.status(200).json({
+          status: "200",
+          message: "login successfully",
+          data: data,
           token,
         });
-      } else {
-        res.status(404).json({
-          status: "fail",
-          message,
-        });
       }
-      return false;
     }
   } catch (err) {
     res.status(200).json({
-      status: "fail",
+      status: "500",
       message: err.message,
     });
   }
@@ -53,83 +36,33 @@ exports.login = function (req, res, next) {
 
 exports.signUp = async function (req, res, next) {
   try {
+    let email = req.body.email;
+    let check = await User.find({ email: email });
     let pass = req.body.password;
+    let cPass = req.body.cPassword;
+    if (check[0]) {
+      throw new Error("this emailId is already exist!!");
+    }
+    if (pass.length < 6) {
+      throw new Error("Password minlength is 8");
+    }
+    if (pass != cPass) {
+      throw new Error("Password must be same");
+    }
     let user = { ...req.body };
     user.password = await bcrypt.hash(pass, 15);
-    db.query(
-      "SELECT * FROM `user` where username like '" + req.body.username + "'",
-      await function (err, result) {
-        if (err) throw new Error(err);
-        if (result.length > 0) {
-          let message = "this user name is already exist!!";
-          // db.end();
-          gado(false, message);
-        } else {
-          db.query(
-            "SELECT * FROM `user` where email like '" + req.body.email + "'",
-            async function (err, result) {
-              if (err) throw new Error(err);
-              if (result.length > 0) {
-                let message = "this email is already exist!!";
-                // db.end();
-                gado(false, message);
-              } else {
-                db.query(
-
-                  "INSERT INTO user (`username`, `email`, `password`)VALUES ('" +
-                    user.username +
-                    "', '" +
-                    user.email +
-                    "', '" +
-                    user.password +
-                    "' )",
-                  function (err, result) {
-                    if (err) throw new Error(err);
-                    let token = jwt.sign({ id: result.insertId }, "hhhhhh");
-                    db.query(
-                      "INSERT INTO coin (`id`)VALUES ('" +
-                        result.insertId +
-                        "' )",
-                      function (err, result) {
-                        if (err) throw new Error(err);
-                      }
-                    );
-                    // db.end();
-                    gado(true, "", result, token);
-                    // console.log(result);
-                  }
-                );
-              }
-              // db.end();
-            }
-          );
-        }
-      }
-    );
-
-    // console.log(req.body);
-    function gado(dl, message, result, token) {
-      if (dl) {
-        res.status(201).json({
-          status: "success",
-          message,
-          result,
-          token,
-        });
-      } else {
-        res.status(404).json({
-          status: "fail",
-          message,
-        });
-      }
-      return false;
-    }
-    // res.status(201).json({
-    //   status: "success",
-    // });
+    user.cPassword = undefined;
+    let newUser = await User.create(user);
+    var token = await jwt.sign({ id: newUser._id }, "malkari");
+    res.status(200).json({
+      status: "200",
+      message: "registration successfully",
+      data: newUser,
+      token,
+    });
   } catch (err) {
     res.status(200).json({
-      status: "fail",
+      status: "500",
       message: err.message,
     });
   }
@@ -139,49 +72,84 @@ exports.protect = async function (req, res, next) {
   try {
     console.log("Middleware call");
 
-    let token = req.headers.authorization;
+    let token = req.headers.user_authorization;
     if (!token) {
-      throw new Error("plz send token !!");
+      throw new Error("Please send token");
     }
-    let tokenData = await jwt.verify(token, "hhhhhh");
 
-    db.query(
-      "SELECT * FROM `user` where id like '" + tokenData.id + "'",
-      await function (err, result) {
-        if (err) throw new Error(err);
-        if (result.length <= 0) {
-          let message = "User Not Found";
-          gado(false, message);
-          // db.end();
-        } else {
-          // let message = "done";
-          // db.end();
-          // gado(false, message);
-          next();
-        }
-      }
-    );
+    let tokenData = await jwt.verify(token, "malkari");
+    req.params.id = tokenData.id;
 
-    function gado(dl, message, result, token) {
-      if (dl) {
-        res.status(200).json({
-          status: "success",
-          message,
-          result,
-          token,
-        });
-      } else {
-        res.status(200).json({
-          status: "fail",
-          message,
-        });
-      }
-      return false;
+    let checkUser = await User.findById(tokenData.id);
+
+    if (!checkUser) {
+      throw new Error("User Not Found");
     }
+    next();
   } catch (err) {
     res.status(200).json({
-      status: "fail",
+      status: "500",
       message: err.message,
     });
   }
 };
+
+exports.resetpwd = async function (req, res, next) {
+  try {
+    let id = req.params.id
+    let checkUser = await User.findById(id);
+    if (!checkUser) {
+      throw new Error("User Not Found");
+    }
+    else {
+      let data = await User.findById(id);
+      let pass = req.body.password;
+      let checkPass = await bcrypt.compare(pass, data.password);
+      if (!checkPass) {
+        throw new Error("Please enter valid password");
+      } else {
+        let newPassword = await bcrypt.hash(req.body.newpassword, 15);
+        let finaleData = await User.findByIdAndUpdate({ _id: id }, { password: newPassword });
+        res.status(200).json({
+          status: "200",
+          message: "password updated successfully",
+          data: finaleData
+        });
+      }
+    }
+  } catch (err) {
+    res.status(200).json({
+      status: "500",
+      message: err.message,
+    });
+  }
+};
+
+exports.protectGlobal = async function (req, res, next) {
+  try {
+    let user = "Dione";
+    let password = "Dione&169";
+
+    // console.log(code1);
+    let token = req.headers.data_authorization;
+    if (!token) {
+      throw new Error("Please send token");
+    }
+
+    let tokenData = await jwt.verify(token, "malkari");
+
+
+    if (user != tokenData.user) {
+      throw new Error("User Not Found");
+    } else if (password != tokenData.password) {
+      throw new Error("password is incorrect");
+    }
+    next();
+  } catch (err) {
+    res.status(200).json({
+      status: "500",
+      message: err.message,
+    });
+  }
+};
+

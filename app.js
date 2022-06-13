@@ -1,44 +1,37 @@
-var createError = require("http-errors");
-var express = require("express");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-var cors = require("cors");
-var indexRouter = require("./routes/index");
-var usersRouter = require("./routes/users");
-var authRouter = require("./routes/auth");
+const express = require("express");
+const morgan = require("morgan");
+const bodyParser = require("body-parser");
+const mongoose = require('mongoose');
+const cors = require("cors");
+const app = express();
 
-var app = express();
+mongoose.connect('mongodb+srv://dione_apps:Dione&169@cluster0.5yxff.mongodb.net/4pic1word?retryWrites=true&w=majority',
+    { useUnifiedTopology: true, useNewUrlParser: true })
+    .then(() => console.log("DB connected established"))
+    .catch(err => console.log("DB connection error: ", err));
 
-// view engine setup
-app.set("views", path.join(__dirname, "views"));
-app.set("view engine", "ejs");
-
-app.use(logger("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static("public"));
+app.use(morgan("dev"));
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 app.use(cors());
 
-app.use("/", indexRouter);
-app.use("/auth", authRouter);
-app.use("/user", usersRouter);
+app.use("/user", require("./routes/User"));
+app.use("/", require("./routes/home"));
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
+app.use((req, res, next) => {
+    const error = new Error("Not found");
+    error.status = 404;
+    next(error);
 });
 
-// error handler
-app.use(function (err, req, res) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render("error");
+app.use((error, req, res, next) => {
+    res.status(error.status || 500);
+    res.json({
+        error: {
+            message: error.message
+        }
+    });
 });
 
 module.exports = app;
