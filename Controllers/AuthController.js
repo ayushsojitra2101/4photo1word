@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
 const User = require("../models/User");
-
+const Coin = require("../models/Coin");
 
 exports.login = async function (req, res, next) {
   try {
@@ -39,21 +39,20 @@ exports.signUp = async function (req, res, next) {
     let email = req.body.email;
     let check = await User.find({ email: email });
     let pass = req.body.password;
-    let cPass = req.body.cPassword;
+
     if (check[0]) {
       throw new Error("this emailId is already exist!!");
     }
-    if (pass.length < 6) {
-      throw new Error("Password minlength is 8");
-    }
-    if (pass != cPass) {
-      throw new Error("Password must be same");
-    }
     let user = { ...req.body };
     user.password = await bcrypt.hash(pass, 15);
-    user.cPassword = undefined;
     let newUser = await User.create(user);
-    var token = await jwt.sign({ id: newUser._id }, "malkari");
+    let newCoin = {
+      userId: newUser._id,
+      primary: 100,
+      secondary: 0,
+    };
+    await Coin.create(newCoin);
+    let token = await jwt.sign({ id: newUser._id }, "malkari");
     res.status(200).json({
       status: "200",
       message: "registration successfully",
@@ -96,12 +95,11 @@ exports.protect = async function (req, res, next) {
 
 exports.resetpwd = async function (req, res, next) {
   try {
-    let id = req.params.id
+    let id = req.params.id;
     let checkUser = await User.findById(id);
     if (!checkUser) {
       throw new Error("User Not Found");
-    }
-    else {
+    } else {
       let data = await User.findById(id);
       let pass = req.body.password;
       let checkPass = await bcrypt.compare(pass, data.password);
@@ -109,11 +107,14 @@ exports.resetpwd = async function (req, res, next) {
         throw new Error("Please enter valid password");
       } else {
         let newPassword = await bcrypt.hash(req.body.newpassword, 15);
-        let finaleData = await User.findByIdAndUpdate({ _id: id }, { password: newPassword });
+        let finaleData = await User.findByIdAndUpdate(
+          { _id: id },
+          { password: newPassword }
+        );
         res.status(200).json({
           status: "200",
           message: "password updated successfully",
-          data: finaleData
+          data: finaleData,
         });
       }
     }
@@ -138,7 +139,6 @@ exports.protectGlobal = async function (req, res, next) {
 
     let tokenData = await jwt.verify(token, "malkari");
 
-
     if (user != tokenData.user) {
       throw new Error("User Not Found");
     } else if (password != tokenData.password) {
@@ -152,4 +152,3 @@ exports.protectGlobal = async function (req, res, next) {
     });
   }
 };
-
