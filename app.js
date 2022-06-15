@@ -17,6 +17,8 @@ app.use(bodyParser.json());
 app.use(cors());
 
 app.use("/user", require("./routes/User"));
+app.use("/package", require("./routes/Package"));
+app.use("/level", require("./routes/Level"));
 app.use("/", require("./routes/home"));
 
 app.use((req, res, next) => {

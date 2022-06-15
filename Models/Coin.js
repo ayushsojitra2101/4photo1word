@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
 
 const coinsSchema = new mongoose.Schema({
-    userId: {
-        type: String,
-        required: true
-    },
+    userId: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],
     primary: {
         type: String,
         required: true,
