@@ -1,4 +1,4 @@
-const Coin = require("../models/Coin");
+const Coin = require("../Models/Coin");
 
 exports.coin = async function (req, res, next) {
   try {

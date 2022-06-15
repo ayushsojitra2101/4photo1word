@@ -1,4 +1,4 @@
-const Level = require("../models/Level");
+const Level = require("../Models/Level");
 
 exports.addLevel = async function (req, res, next) {
   try {
