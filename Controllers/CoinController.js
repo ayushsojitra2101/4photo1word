@@ -2,8 +2,8 @@ const Coin = require("../Models/Coin");
 
 exports.coin = async function (req, res, next) {
   try {
-        let userId = req.params.id;
-        let coin = await Coin.find({userId});        
+        let userId = req.body.useridtoken;
+        let coin = await Coin.find({userId},{userId : 0});        
     res.status(200).json({
       status: "200",
       message: "success",

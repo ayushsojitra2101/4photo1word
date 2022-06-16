@@ -77,7 +77,7 @@ exports.protect = async function (req, res, next) {
     }
 
     let tokenData = await jwt.verify(token, "malkari");
-    req.params.id = tokenData.id;
+    req.body.useridtoken = tokenData.id;
 
     let checkUser = await User.findById(tokenData.id);
 

@@ -9,5 +9,6 @@ router.get('/', function (req, res, next) {
 router.post('/login', AuthController.protectGlobal, AuthController.login);
 router.post('/signup', AuthController.protectGlobal, AuthController.signUp);
 router.get('/coin', AuthController.protectGlobal,AuthController.protect, CoinController.coin);
+router.get('/package/:id', AuthController.protectGlobal,AuthController.protect, CoinController.coin);
 
 module.exports = router;

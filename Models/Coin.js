@@ -3,12 +3,11 @@ const mongoose = require('mongoose');
 const coinsSchema = new mongoose.Schema({
     userId: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],
     primary: {
-        type: String,
-        required: true,
-        unique: true
+        type: Number,
+        required: true
     },
     secondary: {
-        type: String,
+        type: Number,
     }
 });
 
